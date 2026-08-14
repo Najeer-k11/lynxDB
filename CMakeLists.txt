@@ -64,8 +64,10 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Venkata Najeer Kopparapu <https://github.co
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libncursesw6, libmariadb3, libsqlite3-0")
 set(CPACK_DEBIAN_PACKAGE_SECTION "database")
 
-# RPM (Fedora/RHEL/SUSE) packaging
+# RPM (Fedora/RHEL/SUSE/Nobara) packaging
 set(CPACK_RPM_PACKAGE_REQUIRES "ncurses-libs, mariadb-connector-c, sqlite-libs")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+set(CPACK_RPM_PACKAGE_AUTOREQPROV "no")
 
 include(CPack)

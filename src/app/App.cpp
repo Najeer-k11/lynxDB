@@ -1,6 +1,7 @@
 #include "app/App.h"
 #include "ui/Screen.h"
 #include "models/ConfigManager.h"
+#include "models/ThemeManager.h"
 
 #include <ncursesw/ncurses.h>
 #include <clocale>
@@ -33,6 +34,18 @@ App::App() {
 
 App::~App() {
     cleanupNcurses();
+}
+
+void App::cycleNeonTheme() {
+    const auto& themes = ThemeManager::getThemes();
+    state_.currentThemeIndex = (state_.currentThemeIndex + 1) % static_cast<int>(themes.size());
+    ThemeManager::saveThemeIndex(state_.currentThemeIndex);
+    ThemeManager::applyTheme(state_.currentThemeIndex);
+
+    clear();
+    refresh();
+
+    state_.statusMessage = "Switched Neon Accent Theme to: " + themes[state_.currentThemeIndex].name;
 }
 
 void App::setupInitialTree() {
@@ -155,7 +168,7 @@ void App::triggerSavedConnection(int index, Screen& screen) {
     } else {
         state_.errorMessage = err;
         state_.activeDialog = DialogType::ERROR_POPUP;
-        state_.statusMessage = "Connection failed.";
+        state_.statusMessage = "Connection failed: " + err;
     }
 }
 
@@ -336,11 +349,10 @@ void App::initNcurses() {
     if (has_colors()) {
         start_color();
         use_default_colors();
-        init_pair(1, COLOR_CYAN, -1);
-        init_pair(2, COLOR_BLACK, COLOR_CYAN);
-        init_pair(3, COLOR_BLACK, COLOR_WHITE);
-        init_pair(4, COLOR_WHITE, -1);
     }
+
+    state_.currentThemeIndex = ThemeManager::loadSavedThemeIndex();
+    ThemeManager::applyTheme(state_.currentThemeIndex);
 }
 
 void App::cleanupNcurses() {
@@ -356,6 +368,18 @@ void App::handleInput(int ch) {
                 if (idx < static_cast<int>(saved.size())) {
                     state_.welcomeSelectedIndex = idx;
                 }
+            } else if (ch == 'x' || ch == 'X' || ch == KEY_DC) {
+                if (!saved.empty() && state_.welcomeSelectedIndex < static_cast<int>(saved.size())) {
+                    std::string removedName = saved[state_.welcomeSelectedIndex].name;
+                    ConfigManager::removeConnection(state_.welcomeSelectedIndex);
+                    auto updated = ConfigManager::loadConnections();
+                    if (state_.welcomeSelectedIndex >= static_cast<int>(updated.size())) {
+                        state_.welcomeSelectedIndex = std::max(0, static_cast<int>(updated.size()) - 1);
+                    }
+                    state_.statusMessage = "Removed connection '" + removedName + "'.";
+                    setupInitialTree();
+                    return;
+                }
             }
         }
 
@@ -364,6 +388,12 @@ void App::handleInput(int ch) {
             case 'Q':
             case 3: // Ctrl+C
                 state_.running = false;
+                break;
+
+            case 'a':
+            case 'A':
+            case KEY_F(2):
+                cycleNeonTheme();
                 break;
 
             case 'c':
@@ -459,7 +489,7 @@ void App::handleInput(int ch) {
                 if (!state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
                     auto saved = ConfigManager::loadConnections();
                     if (!saved.empty()) {
-                        // Will be executed in run() using triggerSavedConnection
+                        // Handled in run() loop via triggerSavedConnection
                     }
                 } else if (state_.activePanel == Panel::SIDEBAR) {
                     if (state_.sidebarSelectedIndex >= 0 &&
@@ -627,9 +657,7 @@ void App::run() {
                     state_.activeDialog = DialogType::NONE;
                     state_.statusMessage = "Connected to " + cfg.getDisplayURI();
 
-                    auto saved = ConfigManager::loadConnections();
-                    saved.push_back(cfg);
-                    ConfigManager::saveConnections(saved);
+                    ConfigManager::saveOrUpdateConnection(cfg);
 
                     auto serverNode = std::make_shared<DatabaseNode>();
                     std::string label = (cfg.type == DatabaseType::SQLITE) ? "sqlite: " + cfg.host : cfg.host + ":" + std::to_string(cfg.port);

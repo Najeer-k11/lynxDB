@@ -36,6 +36,7 @@ public:
             out << "Host=" << cfg.host << "\n";
             out << "Port=" << cfg.port << "\n";
             out << "User=" << cfg.user << "\n";
+            out << "Password=" << cfg.password << "\n";
             out << "Database=" << cfg.database << "\n";
             out << "\n";
         }
@@ -65,6 +66,7 @@ public:
                     else if (key == "Host") cur.host = val;
                     else if (key == "Port") { try { cur.port = std::stoi(val); } catch (...) {} }
                     else if (key == "User") cur.user = val;
+                    else if (key == "Password") cur.password = val;
                     else if (key == "Database") cur.database = val;
                 }
             }
@@ -72,6 +74,32 @@ public:
         if (inConfig) configs.push_back(cur);
 
         return configs;
+    }
+
+    static void saveOrUpdateConnection(const ConnectionConfig& newCfg) {
+        auto configs = loadConnections();
+        bool exists = false;
+        for (auto& cfg : configs) {
+            if (cfg.host == newCfg.host && cfg.port == newCfg.port && cfg.database == newCfg.database && cfg.user == newCfg.user) {
+                cfg = newCfg;
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            configs.push_back(newCfg);
+        }
+        saveConnections(configs);
+    }
+
+    static bool removeConnection(size_t index) {
+        auto configs = loadConnections();
+        if (index < configs.size()) {
+            configs.erase(configs.begin() + index);
+            saveConnections(configs);
+            return true;
+        }
+        return false;
     }
 };
 

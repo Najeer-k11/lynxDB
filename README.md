@@ -11,6 +11,18 @@
 
 ---
 
+## Preview
+
+![Welcome Screen & Saved Connections](https://raw.githubusercontent.com/Najeer-k11/lynxDB/main/preview/1.png)
+
+![Database Explorer & Content Table](https://raw.githubusercontent.com/Najeer-k11/lynxDB/main/preview/2.png)
+
+![Interactive Table Row Filtering](https://raw.githubusercontent.com/Najeer-k11/lynxDB/main/preview/3.png)
+
+![Dynamic Accent Themes](https://raw.githubusercontent.com/Najeer-k11/lynxDB/main/preview/4.png)
+
+---
+
 ## Features
 
 - **Multi-Database Support**: Native connection drivers for **MySQL / MariaDB** and **SQLite3**.

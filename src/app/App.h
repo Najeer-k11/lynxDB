@@ -4,6 +4,7 @@
 #include "database/DatabaseManager.h"
 #include "models/ConnectionConfig.h"
 #include "models/DatabaseNode.h"
+#include "models/ThemeManager.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -47,6 +48,9 @@ struct AppState {
     ViewMode viewMode{ViewMode::WELCOME};
     std::string errorMessage;
 
+    // Theme state
+    int currentThemeIndex{0};
+
     // Database Tree Navigation
     std::shared_ptr<DatabaseNode> treeRoot;
     std::vector<VisibleNode> visibleTreeNodes;
@@ -77,7 +81,7 @@ struct AppState {
     std::string editTargetPkCol;
     std::string editTargetPkVal;
 
-    std::string statusMessage{"Welcome to lynxDB! Press 'c' to Connect or select a saved connection."};
+    std::string statusMessage{"Welcome to lynxDB! Press 'c' to Connect or 'a' / F2 to cycle Neon Theme."};
 };
 
 class App {
@@ -101,6 +105,7 @@ private:
     void triggerCellEdit(Screen& screen);
     void triggerSavedConnection(int index, Screen& screen);
     void applyFilter();
+    void cycleNeonTheme();
 
     AppState state_;
     DatabaseManager dbManager_;

@@ -1,4 +1,5 @@
 #include "ui/StatusBar.h"
+#include "models/ThemeManager.h"
 
 namespace dbterm {
 
@@ -33,7 +34,10 @@ void StatusBar::render(const AppState& state) {
         wattron(win_, A_REVERSE);
     }
 
-    std::string shortcuts = " Tab: Switch | ↑↓/←→: Nav | e: Edit | y/Y: Copy | F5: Run SQL | q: Quit ";
+    const auto& themes = ThemeManager::getThemes();
+    std::string themeName = themes[state.currentThemeIndex % themes.size()].name;
+
+    std::string shortcuts = " Tab: Switch | ↑↓/←→: Nav | /: Filter | e: Edit | y/Y: Copy | a: " + themeName + " | q: Quit ";
     if (!state.contentHeaders.empty()) {
         int totalCols = static_cast<int>(state.contentHeaders.size());
         shortcuts += "| Cols " + std::to_string(state.contentSelectedColIndex + 1) + " of " + std::to_string(totalCols) + " ";

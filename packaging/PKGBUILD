@@ -1,0 +1,25 @@
+# PKGBUILD for lynxDB on Arch Linux / Manjaro / EndeavourOS (AUR)
+# Maintainer: Venkata Najeer Kopparapu <https://github.com/Najeer-k11>
+
+pkgname=lynxdb
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Fast, keyboard-driven Linux terminal database explorer for MySQL/MariaDB and SQLite"
+arch=('x86_64')
+url="https://github.com/Najeer-k11/lynxDB"
+license=('MIT')
+depends=('ncurses' 'mariadb-libs' 'sqlite')
+makedepends=('cmake' 'gcc')
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/Najeer-k11/lynxDB/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake -B build -S "${pkgname}-${pkgver}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build
+}
+
+package() {
+    DESTDIR="${pkgdir}" cmake --install build
+}

@@ -1,0 +1,46 @@
+# Build directories
+build/
+build*/
+bin/
+out/
+
+# Binary executables and compiled object files
+*.o
+*.so
+*.so.*
+*.a
+*.dylib
+*.dll
+lynxdb
+dbterm
+
+# CPack & Packaging outputs
+*.deb
+*.rpm
+*.tar.gz
+*.tar.xz
+*.zip
+*.AppImage
+_CPack_Packages/
+
+# CMake temporary files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Local test databases & log files
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# IDE & OS temporary files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

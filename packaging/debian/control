@@ -1,0 +1,15 @@
+Source: lynxdb
+Section: database
+Priority: optional
+Maintainer: Venkata Najeer Kopparapu <https://github.com/Najeer-k11>
+Build-Depends: debhelper-compat (= 13), cmake, g++, pkg-config, libncursesw5-dev, libmariadb-dev, libsqlite3-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/Najeer-k11/lynxDB
+
+Package: lynxdb
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libncursesw6, libmariadb3, libsqlite3-0
+Description: Fast, keyboard-driven Linux terminal database explorer
+ lynxDB is an information-dense terminal database viewer built in C++20 for
+ MySQL/MariaDB and SQLite with an interactive ncursesw TUI, schema inspector,
+ and SQL query execution.

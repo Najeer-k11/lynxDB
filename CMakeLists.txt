@@ -19,6 +19,7 @@ add_executable(lynxdb
     src/ui/Screen.cpp
     src/ui/Sidebar.cpp
     src/ui/TableView.cpp
+    src/ui/WelcomeView.cpp
     src/ui/StatusBar.cpp
     src/ui/ConnectionDialog.cpp
     src/ui/ErrorDialog.cpp

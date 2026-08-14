@@ -42,12 +42,15 @@ void TableView::render(const AppState& state) {
     if (!state.activeTableName.empty()) {
         title += state.activeDatabaseName.empty() ? "" : (state.activeDatabaseName + ".");
         title += state.activeTableName + " ";
-    } else {
-        title += "users ";
     }
 
-    int totalRows = static_cast<int>(state.contentRows.size());
-    title += "(" + std::to_string(totalRows) + " rows) ";
+    const auto& displayRows = state.isFilterActive ? state.filteredRows : state.contentRows;
+    int totalRows = static_cast<int>(displayRows.size());
+    title += "(" + std::to_string(totalRows) + " rows";
+    if (state.isFilterActive) {
+        title += " | Filter: \"" + state.filterQuery + "\"";
+    }
+    title += ") ";
 
     mvwprintw(win_, 0, 2, "%s", title.c_str());
 
@@ -61,20 +64,24 @@ void TableView::render(const AppState& state) {
         return;
     }
 
-    // Calculate dynamic column widths
+    if (displayRows.empty()) {
+        mvwprintw(win_, 2, 4, "[ No rows matching filter query: \"%s\" ]", state.filterQuery.c_str());
+        wrefresh(win_);
+        return;
+    }
+
     int numCols = static_cast<int>(state.contentHeaders.size());
     std::vector<int> colWidths(numCols, 8);
     for (int c = 0; c < numCols; ++c) {
         colWidths[c] = std::max(colWidths[c], static_cast<int>(state.contentHeaders[c].length()));
-        for (const auto& row : state.contentRows) {
+        for (const auto& row : displayRows) {
             if (c < static_cast<int>(row.size())) {
                 colWidths[c] = std::max(colWidths[c], static_cast<int>(row[c].length()));
             }
         }
-        colWidths[c] = std::min(colWidths[c], 30); // Cap column width at 30
+        colWidths[c] = std::min(colWidths[c], 30);
     }
 
-    // Calculate visible columns using horizontal scroll offset
     int availableWidth = width_ - 4;
     int colStart = std::clamp(state.colOffset, 0, std::max(0, numCols - 1));
     int visibleCols = 0;
@@ -86,7 +93,6 @@ void TableView::render(const AppState& state) {
     }
     if (visibleCols == 0) visibleCols = 1;
 
-    // Render Table Header Line
     std::string headerLine;
     for (int c = 0; c < visibleCols; ++c) {
         int actualColIdx = colStart + c;
@@ -104,7 +110,6 @@ void TableView::render(const AppState& state) {
     mvwprintw(win_, 1, 2, "%s", headerLine.c_str());
     wattroff(win_, A_BOLD);
 
-    // Render Horizontal Separator
     std::string sepLine;
     for (int c = 0; c < visibleCols; ++c) {
         int actualColIdx = colStart + c;
@@ -115,7 +120,6 @@ void TableView::render(const AppState& state) {
     }
     mvwprintw(win_, 2, 2, "%s", sepLine.c_str());
 
-    // Calculate Vertical Row Scroll Offset (UNTOUCHED / PRESERVED)
     int maxDataRows = height_ - 4;
     int scrollOffset = 0;
     if (state.contentSelectedIndex >= maxDataRows) {
@@ -128,7 +132,7 @@ void TableView::render(const AppState& state) {
         int actualRowIdx = scrollOffset + r;
         bool isRowSelected = (actualRowIdx == state.contentSelectedIndex);
 
-        const auto& rowData = state.contentRows[actualRowIdx];
+        const auto& rowData = displayRows[actualRowIdx];
 
         int printX = 2;
         for (int c = 0; c < visibleCols; ++c) {

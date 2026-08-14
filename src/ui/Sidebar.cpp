@@ -43,11 +43,19 @@ void Sidebar::render(const AppState& state) {
 
     int maxItems = height_ - 2;
     int itemCount = static_cast<int>(state.visibleTreeNodes.size());
-    int visibleItems = std::min(maxItems, itemCount);
+
+    // Calculate vertical scroll offset to keep selected tree node in view
+    int scrollOffset = 0;
+    if (state.sidebarSelectedIndex >= maxItems) {
+        scrollOffset = state.sidebarSelectedIndex - maxItems + 1;
+    }
+
+    int visibleItems = std::min(maxItems, itemCount - scrollOffset);
 
     for (int i = 0; i < visibleItems; ++i) {
-        bool isSelected = (i == state.sidebarSelectedIndex);
-        const auto& item = state.visibleTreeNodes[i];
+        int actualIdx = scrollOffset + i;
+        bool isSelected = (actualIdx == state.sidebarSelectedIndex);
+        const auto& item = state.visibleTreeNodes[actualIdx];
 
         if (isSelected) {
             if (isActive && has_colors()) {

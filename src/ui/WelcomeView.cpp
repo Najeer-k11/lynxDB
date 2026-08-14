@@ -1,0 +1,112 @@
+#include "ui/WelcomeView.h"
+#include "models/ConfigManager.h"
+#include <algorithm>
+
+namespace dbterm {
+
+WelcomeView::~WelcomeView() {
+    destroy();
+}
+
+void WelcomeView::init(int height, int width, int starty, int startx) {
+    destroy();
+    height_ = height;
+    width_ = width;
+    starty_ = starty;
+    startx_ = startx;
+    win_ = newwin(height_, width_, starty_, startx_);
+}
+
+void WelcomeView::destroy() {
+    if (win_) {
+        delwin(win_);
+        win_ = nullptr;
+    }
+}
+
+void WelcomeView::render(const AppState& state) {
+    if (!win_) return;
+
+    werase(win_);
+
+    box(win_, 0, 0);
+
+    if (has_colors()) {
+        wattron(win_, COLOR_PAIR(1) | A_BOLD);
+    }
+    mvwprintw(win_, 0, 2, " Welcome to lynxDB ");
+    if (has_colors()) {
+        wattroff(win_, COLOR_PAIR(1) | A_BOLD);
+    }
+
+    int centerY = 2;
+    int centerX = (width_ - 48) / 2;
+    if (centerX < 2) centerX = 2;
+
+    if (has_colors()) {
+        wattron(win_, COLOR_PAIR(1) | A_BOLD);
+    }
+    mvwprintw(win_, centerY,     centerX, "  _             _   _____  ____  ");
+    mvwprintw(win_, centerY + 1, centerX, " | |_   _ _ __ | | _|  _  \\| __ ) ");
+    mvwprintw(win_, centerY + 2, centerX, " | | | | | '_ \\| |/ / | | ||  _ \\ ");
+    mvwprintw(win_, centerY + 3, centerX, " | | |_| | | | |   <| |_| || |_) |");
+    mvwprintw(win_, centerY + 4, centerX, " |_|\\__,_|_| |_|_|\\_\\_____/|____/ ");
+    if (has_colors()) {
+        wattroff(win_, COLOR_PAIR(1) | A_BOLD);
+    }
+
+    mvwprintw(win_, centerY + 6, std::max(2, (width_ - 48) / 2), "Fast, Keyboard-Driven Terminal Database Explorer");
+
+    int savedY = centerY + 8;
+    int savedX = std::max(3, (width_ - 52) / 2);
+
+    auto savedConfigs = ConfigManager::loadConnections();
+    if (!savedConfigs.empty()) {
+        wattron(win_, A_BOLD);
+        mvwprintw(win_, savedY, savedX, "Saved Connections (Press Enter or 1..%d to Connect):", std::min(9, static_cast<int>(savedConfigs.size())));
+        wattroff(win_, A_BOLD);
+
+        int maxVisSaved = std::min(5, static_cast<int>(savedConfigs.size()));
+        for (int i = 0; i < maxVisSaved; ++i) {
+            bool isSelected = (i == state.welcomeSelectedIndex);
+            const auto& cfg = savedConfigs[i];
+
+            std::string label = "[" + std::to_string(i + 1) + "] " + cfg.name + " (" + cfg.host + ")";
+
+            if (isSelected) {
+                if (has_colors()) {
+                    wattron(win_, COLOR_PAIR(2) | A_BOLD);
+                } else {
+                    wattron(win_, A_REVERSE);
+                }
+                mvwprintw(win_, savedY + 1 + i, savedX + 2, "▸ %-*s", width_ - savedX - 8, label.c_str());
+                if (has_colors()) {
+                    wattroff(win_, COLOR_PAIR(2) | A_BOLD);
+                } else {
+                    wattroff(win_, A_REVERSE);
+                }
+            } else {
+                mvwprintw(win_, savedY + 1 + i, savedX + 2, "  %-*s", width_ - savedX - 8, label.c_str());
+            }
+        }
+        savedY += maxVisSaved + 2;
+    } else {
+        savedY += 1;
+    }
+
+    wattron(win_, A_BOLD);
+    mvwprintw(win_, savedY, savedX, "Quick Actions:");
+    wattroff(win_, A_BOLD);
+
+    mvwprintw(win_, savedY + 1, savedX + 2, "• Press [ c ] or [ n ]  New Connection (MySQL / SQLite / URI)");
+    mvwprintw(win_, savedY + 2, savedX + 2, "• Press [ Tab ]        Switch Focus between Sidebar & Main Area");
+    mvwprintw(win_, savedY + 3, savedX + 2, "• Press [ : ]          Execute Custom SQL Statement");
+    mvwprintw(win_, savedY + 4, savedX + 2, "• Press [ q ]          Quit lynxDB");
+
+    int footerY = height_ - 2;
+    mvwprintw(win_, footerY, std::max(2, (width_ - 54) / 2), "Author: Venkata Najeer Kopparapu (github.com/Najeer-k11)");
+
+    wrefresh(win_);
+}
+
+} // namespace dbterm

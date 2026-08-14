@@ -28,11 +28,15 @@ void Screen::updateDimensions(const AppState& state) {
 
         sidebar_.init(mainHeight, sidebarWidth, 0, 0);
         tableView_.init(mainHeight, contentWidth, 0, sidebarWidth);
+        welcomeView_.init(mainHeight, contentWidth, 0, sidebarWidth);
         statusBar_.init(statusHeight, termWidth_, mainHeight, 0);
 
         connectionDialog_.init(termHeight_, termWidth_);
         errorDialog_.init(termHeight_, termWidth_, "Database Error", state.errorMessage);
         sqlQueryDialog_.init(termHeight_, termWidth_);
+        cellEditDialog_.init(termHeight_, termWidth_, state.editTargetColumn, "");
+        confirmDialog_.init(termHeight_, termWidth_, state.pendingUpdateSql);
+        filterDialog_.init(termHeight_, termWidth_);
 
         clear();
         refresh();
@@ -43,7 +47,13 @@ void Screen::render(const AppState& state) {
     updateDimensions(state);
 
     sidebar_.render(state);
-    tableView_.render(state);
+
+    if (!state.isConnected && state.viewMode == ViewMode::WELCOME) {
+        welcomeView_.render(state);
+    } else {
+        tableView_.render(state);
+    }
+
     statusBar_.render(state);
 
     if (state.activeDialog == DialogType::CONNECTION) {
@@ -59,6 +69,9 @@ void Screen::render(const AppState& state) {
         cellEditDialog_.render();
     } else if (state.activeDialog == DialogType::CONFIRM_UPDATE) {
         confirmDialog_.render();
+    } else if (state.activeDialog == DialogType::FILTER_PROMPT) {
+        filterDialog_.init(termHeight_, termWidth_);
+        filterDialog_.render();
     }
 }
 

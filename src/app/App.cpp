@@ -28,42 +28,40 @@ static std::string base64Encode(const std::string& input) {
 
 App::App() {
     initNcurses();
-    setupDefaultMockTree();
-
-    auto savedConfigs = ConfigManager::loadConnections();
-    if (!savedConfigs.empty()) {
-        state_.statusMessage = "Loaded " + std::to_string(savedConfigs.size()) + " saved connection configurations.";
-    }
+    setupInitialTree();
 }
 
 App::~App() {
     cleanupNcurses();
 }
 
-void App::setupDefaultMockTree() {
-    auto server = std::make_shared<DatabaseNode>();
-    server->name = "localhost:3306";
-    server->type = NodeType::SERVER;
-    server->expanded = true;
+void App::setupInitialTree() {
+    state_.isConnected = false;
+    state_.viewMode = ViewMode::WELCOME;
 
-    auto db1 = std::make_shared<DatabaseNode>();
-    db1->name = "showroom_db";
-    db1->dbName = "showroom_db";
-    db1->type = NodeType::DATABASE;
-    db1->expanded = true;
-    db1->loaded = true;
+    auto root = std::make_shared<DatabaseNode>();
+    root->name = "Connections";
+    root->type = NodeType::SERVER;
+    root->expanded = true;
 
-    auto t1 = std::make_shared<DatabaseNode>(); t1->name = "users"; t1->type = NodeType::TABLE; t1->dbName = "showroom_db";
-    auto t2 = std::make_shared<DatabaseNode>(); t2->name = "products"; t2->type = NodeType::TABLE; t2->dbName = "showroom_db";
-    auto t3 = std::make_shared<DatabaseNode>(); t3->name = "orders"; t3->type = NodeType::TABLE; t3->dbName = "showroom_db";
+    auto savedConfigs = ConfigManager::loadConnections();
+    if (!savedConfigs.empty()) {
+        for (const auto& cfg : savedConfigs) {
+            auto node = std::make_shared<DatabaseNode>();
+            node->name = cfg.name + " (" + cfg.host + ")";
+            node->type = NodeType::DATABASE;
+            root->children.push_back(node);
+        }
+        state_.statusMessage = "Welcome! Loaded " + std::to_string(savedConfigs.size()) + " saved connections. Press Enter or 1.." + std::to_string(std::min(9, (int)savedConfigs.size())) + " to Connect.";
+    } else {
+        auto node = std::make_shared<DatabaseNode>();
+        node->name = "Press 'c' or 'n' to Connect";
+        node->type = NodeType::DATABASE;
+        root->children.push_back(node);
+        state_.statusMessage = "Welcome to lynxDB! Press 'c' or 'n' to Connect.";
+    }
 
-    db1->children.push_back(t1);
-    db1->children.push_back(t2);
-    db1->children.push_back(t3);
-
-    server->children.push_back(db1);
-
-    state_.treeRoot = server;
+    state_.treeRoot = root;
     rebuildVisibleTreeNodes();
 }
 
@@ -81,6 +79,83 @@ void App::rebuildVisibleTreeNodes() {
     state_.visibleTreeNodes.clear();
     if (state_.treeRoot) {
         flattenNode(state_.treeRoot, 0);
+    }
+}
+
+void App::applyFilter() {
+    if (state_.filterQuery.empty()) {
+        state_.isFilterActive = false;
+        state_.filteredRows.clear();
+        state_.statusMessage = "Filter cleared.";
+        return;
+    }
+
+    std::string needle = state_.filterQuery;
+    std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
+
+    state_.filteredRows.clear();
+    for (const auto& row : state_.contentRows) {
+        bool match = false;
+        for (const auto& col : row) {
+            std::string haystack = col;
+            std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
+            if (haystack.find(needle) != std::string::npos) {
+                match = true;
+                break;
+            }
+        }
+        if (match) {
+            state_.filteredRows.push_back(row);
+        }
+    }
+
+    state_.isFilterActive = true;
+    state_.contentSelectedIndex = 0;
+    state_.contentSelectedColIndex = 0;
+    state_.colOffset = 0;
+
+    state_.statusMessage = "Filter active: \"" + state_.filterQuery + "\" (" + std::to_string(state_.filteredRows.size()) + " of " + std::to_string(state_.contentRows.size()) + " rows matching).";
+}
+
+void App::triggerSavedConnection(int index, Screen& screen) {
+    auto saved = ConfigManager::loadConnections();
+    if (index < 0 || index >= static_cast<int>(saved.size())) return;
+
+    ConnectionConfig cfg = saved[index];
+    std::string err;
+
+    state_.statusMessage = "Connecting to " + cfg.getDisplayURI() + "...";
+    screen.render(state_);
+
+    if (dbManager_.connect(cfg, err)) {
+        state_.isConnected = true;
+        state_.viewMode = ViewMode::TABLE_DATA;
+        state_.activeDialog = DialogType::NONE;
+        state_.statusMessage = "Connected to " + cfg.getDisplayURI();
+
+        auto serverNode = std::make_shared<DatabaseNode>();
+        std::string label = (cfg.type == DatabaseType::SQLITE) ? "sqlite: " + cfg.host : cfg.host + ":" + std::to_string(cfg.port);
+        serverNode->name = label;
+        serverNode->type = NodeType::SERVER;
+        serverNode->expanded = true;
+
+        std::string dbErr;
+        auto dbs = dbManager_.activeConnection()->getDatabases(dbErr);
+        for (const auto& db : dbs) {
+            auto dbNode = std::make_shared<DatabaseNode>();
+            dbNode->name = db;
+            dbNode->dbName = db;
+            dbNode->type = NodeType::DATABASE;
+            serverNode->children.push_back(dbNode);
+        }
+
+        state_.treeRoot = serverNode;
+        state_.sidebarSelectedIndex = 0;
+        rebuildVisibleTreeNodes();
+    } else {
+        state_.errorMessage = err;
+        state_.activeDialog = DialogType::ERROR_POPUP;
+        state_.statusMessage = "Connection failed.";
     }
 }
 
@@ -106,11 +181,13 @@ void App::loadTableData(const std::string& dbName, const std::string& tableName)
             state_.contentSelectedColIndex = 0;
             state_.colOffset = 0;
             state_.statusMessage = "Loaded data for '" + tableName + "' (" + std::to_string(qr.rows.size()) + " rows).";
+
+            if (state_.isFilterActive) {
+                applyFilter();
+            }
         } else {
             state_.statusMessage = "Error loading table data: " + qr.errorMessage;
         }
-    } else {
-        state_.statusMessage = "Mock table data viewed for '" + tableName + "'. Connect for live query.";
     }
 }
 
@@ -129,21 +206,13 @@ void App::loadTableStructure(const std::string& dbName, const std::string& table
             state_.contentSelectedColIndex = 0;
             state_.colOffset = 0;
             state_.statusMessage = "Loaded schema structure for '" + tableName + "'.";
+
+            if (state_.isFilterActive) {
+                applyFilter();
+            }
         } else {
             state_.statusMessage = "Error loading schema: " + qr.errorMessage;
         }
-    } else {
-        state_.contentHeaders = {"Field", "Type", "Null", "Key", "Default", "Extra"};
-        state_.contentRows = {
-            {"id", "int(11)", "NO", "PRI", "NULL", "auto_increment"},
-            {"name", "varchar(255)", "NO", "", "NULL", ""},
-            {"email", "varchar(255)", "YES", "UNI", "NULL", ""},
-            {"status", "varchar(50)", "NO", "", "ACTIVE", ""}
-        };
-        state_.contentSelectedIndex = 0;
-        state_.contentSelectedColIndex = 0;
-        state_.colOffset = 0;
-        state_.statusMessage = "Mock structure viewed for '" + tableName + "'.";
     }
 }
 
@@ -187,7 +256,7 @@ void App::copyToClipboard(const std::string& text) {
 }
 
 void App::triggerCellEdit(Screen& screen) {
-    if (state_.activePanel != Panel::CONTENT || state_.contentHeaders.empty() || state_.contentRows.empty()) {
+    if (!state_.isConnected || state_.activePanel != Panel::CONTENT || state_.contentHeaders.empty() || state_.contentRows.empty()) {
         state_.statusMessage = "Select a valid cell in Content Panel to edit.";
         return;
     }
@@ -202,7 +271,6 @@ void App::triggerCellEdit(Screen& screen) {
     std::string pkCol;
     std::string pkVal;
 
-    // Detect Primary Key column
     if (dbManager_.isConnected()) {
         std::string err;
         QueryResult structQr = dbManager_.activeConnection()->getTableStructure(state_.activeDatabaseName, state_.activeTableName, err);
@@ -231,7 +299,6 @@ void App::triggerCellEdit(Screen& screen) {
         return;
     }
 
-    // Find PK value for current row
     int pkColIdx = -1;
     for (int i = 0; i < static_cast<int>(state_.contentHeaders.size()); ++i) {
         if (state_.contentHeaders[i] == pkCol) {
@@ -240,19 +307,20 @@ void App::triggerCellEdit(Screen& screen) {
         }
     }
 
-    if (pkColIdx == -1 || pkColIdx >= static_cast<int>(state_.contentRows[rowIdx].size())) {
+    const auto& rows = state_.isFilterActive ? state_.filteredRows : state_.contentRows;
+    if (pkColIdx == -1 || pkColIdx >= static_cast<int>(rows[rowIdx].size())) {
         state_.errorMessage = "Cannot edit cell: Primary key column '" + pkCol + "' not found in active row.";
         state_.activeDialog = DialogType::ERROR_POPUP;
         return;
     }
 
-    pkVal = state_.contentRows[rowIdx][pkColIdx];
+    pkVal = rows[rowIdx][pkColIdx];
 
     state_.editTargetColumn = state_.contentHeaders[colIdx];
     state_.editTargetPkCol = pkCol;
     state_.editTargetPkVal = pkVal;
 
-    std::string curVal = state_.contentRows[rowIdx][colIdx];
+    std::string curVal = rows[rowIdx][colIdx];
     screen.cellEditDialog().init(0, 0, state_.editTargetColumn, curVal);
     state_.activeDialog = DialogType::CELL_EDIT;
 }
@@ -281,6 +349,16 @@ void App::cleanupNcurses() {
 
 void App::handleInput(int ch) {
     if (state_.activeDialog == DialogType::NONE) {
+        if (!state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
+            auto saved = ConfigManager::loadConnections();
+            if (ch >= '1' && ch <= '9') {
+                int idx = ch - '1';
+                if (idx < static_cast<int>(saved.size())) {
+                    state_.welcomeSelectedIndex = idx;
+                }
+            }
+        }
+
         switch (ch) {
             case 'q':
             case 'Q':
@@ -294,6 +372,13 @@ void App::handleInput(int ch) {
             case 'N':
                 state_.activeDialog = DialogType::CONNECTION;
                 state_.statusMessage = "Edit connection parameters and press Enter to connect.";
+                break;
+
+            case '/':
+                if (state_.isConnected) {
+                    state_.activeDialog = DialogType::FILTER_PROMPT;
+                    state_.statusMessage = "Type search filter string and press Enter.";
+                }
                 break;
 
             case ':':
@@ -319,10 +404,10 @@ void App::handleInput(int ch) {
                 }
                 break;
 
-            case '\t': // Tab becomes SOLE panel switch key
+            case '\t':
                 if (state_.activePanel == Panel::SIDEBAR) {
                     state_.activePanel = Panel::CONTENT;
-                    state_.statusMessage = "Active: Content Panel. Use ↑↓/←→ to navigate cells, e to Edit, y to Copy.";
+                    state_.statusMessage = "Active: Content Panel. Use ↑↓/←→ to navigate cells, / to Filter, e to Edit, y to Copy.";
                 } else {
                     state_.activePanel = Panel::SIDEBAR;
                     state_.statusMessage = "Active: Sidebar Panel. Use ↑↓ to navigate tree nodes, Enter to expand.";
@@ -371,7 +456,12 @@ void App::handleInput(int ch) {
             case '\n':
             case KEY_ENTER:
             case ' ':
-                if (state_.activePanel == Panel::SIDEBAR) {
+                if (!state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
+                    auto saved = ConfigManager::loadConnections();
+                    if (!saved.empty()) {
+                        // Will be executed in run() using triggerSavedConnection
+                    }
+                } else if (state_.activePanel == Panel::SIDEBAR) {
                     if (state_.sidebarSelectedIndex >= 0 &&
                         state_.sidebarSelectedIndex < static_cast<int>(state_.visibleTreeNodes.size())) {
                         toggleNodeExpansion(state_.visibleTreeNodes[state_.sidebarSelectedIndex].node);
@@ -381,7 +471,11 @@ void App::handleInput(int ch) {
 
             case KEY_UP:
             case 'k':
-                if (state_.activePanel == Panel::SIDEBAR) {
+                if (!state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
+                    if (state_.welcomeSelectedIndex > 0) {
+                        state_.welcomeSelectedIndex--;
+                    }
+                } else if (state_.activePanel == Panel::SIDEBAR) {
                     if (state_.sidebarSelectedIndex > 0) {
                         state_.sidebarSelectedIndex--;
                     }
@@ -394,55 +488,73 @@ void App::handleInput(int ch) {
 
             case KEY_DOWN:
             case 'j':
-                if (state_.activePanel == Panel::SIDEBAR) {
+                if (!state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
+                    auto saved = ConfigManager::loadConnections();
+                    if (state_.welcomeSelectedIndex + 1 < static_cast<int>(saved.size())) {
+                        state_.welcomeSelectedIndex++;
+                    }
+                } else if (state_.activePanel == Panel::SIDEBAR) {
                     if (state_.sidebarSelectedIndex + 1 < static_cast<int>(state_.visibleTreeNodes.size())) {
                         state_.sidebarSelectedIndex++;
                     }
                 } else {
-                    if (state_.contentSelectedIndex + 1 < static_cast<int>(state_.contentRows.size())) {
+                    const auto& rows = state_.isFilterActive ? state_.filteredRows : state_.contentRows;
+                    if (state_.contentSelectedIndex + 1 < static_cast<int>(rows.size())) {
                         state_.contentSelectedIndex++;
                     }
                 }
                 break;
 
-            case 'y': // Copy cell value
-                if (state_.activePanel == Panel::CONTENT && !state_.contentRows.empty()) {
-                    int r = state_.contentSelectedIndex;
-                    int c = state_.contentSelectedColIndex;
-                    if (r >= 0 && r < static_cast<int>(state_.contentRows.size()) &&
-                        c >= 0 && c < static_cast<int>(state_.contentRows[r].size())) {
-                        std::string val = state_.contentRows[r][c];
-                        if (val == "NULL") val = ""; // NULL copies as empty string per convention
-                        copyToClipboard(val);
+            case 'y':
+                if (state_.activePanel == Panel::CONTENT) {
+                    const auto& rows = state_.isFilterActive ? state_.filteredRows : state_.contentRows;
+                    if (!rows.empty()) {
+                        int r = state_.contentSelectedIndex;
+                        int c = state_.contentSelectedColIndex;
+                        if (r >= 0 && r < static_cast<int>(rows.size()) &&
+                            c >= 0 && c < static_cast<int>(rows[r].size())) {
+                            std::string val = rows[r][c];
+                            if (val == "NULL") val = "";
+                            copyToClipboard(val);
+                        }
                     }
                 }
                 break;
 
-            case 'Y': // Copy full row tab-separated
-                if (state_.activePanel == Panel::CONTENT && !state_.contentRows.empty()) {
-                    int r = state_.contentSelectedIndex;
-                    if (r >= 0 && r < static_cast<int>(state_.contentRows.size())) {
-                        std::string rowLine;
-                        const auto& rowVec = state_.contentRows[r];
-                        for (size_t i = 0; i < rowVec.size(); ++i) {
-                            std::string val = (rowVec[i] == "NULL") ? "" : rowVec[i];
-                            rowLine += val;
-                            if (i + 1 < rowVec.size()) rowLine += "\t";
+            case 'Y':
+                if (state_.activePanel == Panel::CONTENT) {
+                    const auto& rows = state_.isFilterActive ? state_.filteredRows : state_.contentRows;
+                    if (!rows.empty()) {
+                        int r = state_.contentSelectedIndex;
+                        if (r >= 0 && r < static_cast<int>(rows.size())) {
+                            std::string rowLine;
+                            const auto& rowVec = rows[r];
+                            for (size_t i = 0; i < rowVec.size(); ++i) {
+                                std::string val = (rowVec[i] == "NULL") ? "" : rowVec[i];
+                                rowLine += val;
+                                if (i + 1 < rowVec.size()) rowLine += "\t";
+                            }
+                            copyToClipboard(rowLine);
                         }
-                        copyToClipboard(rowLine);
                     }
                 }
                 break;
 
             case KEY_PPAGE:
-                if (state_.activePanel == Panel::CONTENT) {
+                if (state_.activePanel == Panel::SIDEBAR) {
+                    state_.sidebarSelectedIndex = std::max(0, state_.sidebarSelectedIndex - 10);
+                } else {
                     state_.contentSelectedIndex = std::max(0, state_.contentSelectedIndex - 10);
                 }
                 break;
 
             case KEY_NPAGE:
-                if (state_.activePanel == Panel::CONTENT) {
-                    state_.contentSelectedIndex = std::min(static_cast<int>(state_.contentRows.size()) - 1, state_.contentSelectedIndex + 10);
+                if (state_.activePanel == Panel::SIDEBAR) {
+                    int maxIdx = static_cast<int>(state_.visibleTreeNodes.size()) - 1;
+                    state_.sidebarSelectedIndex = std::min(std::max(0, maxIdx), state_.sidebarSelectedIndex + 10);
+                } else {
+                    const auto& rows = state_.isFilterActive ? state_.filteredRows : state_.contentRows;
+                    state_.contentSelectedIndex = std::min(static_cast<int>(rows.size()) - 1, state_.contentSelectedIndex + 10);
                 }
                 break;
 
@@ -478,6 +590,22 @@ void App::run() {
         int ch = getch();
         if (ch == ERR) continue;
 
+        if (state_.activeDialog == DialogType::NONE && !state_.isConnected && state_.viewMode == ViewMode::WELCOME) {
+            auto saved = ConfigManager::loadConnections();
+            if (!saved.empty()) {
+                if (ch >= '1' && ch <= '9') {
+                    int idx = ch - '1';
+                    if (idx < static_cast<int>(saved.size())) {
+                        triggerSavedConnection(idx, screen);
+                        continue;
+                    }
+                } else if (ch == '\n' || ch == KEY_ENTER || ch == ' ') {
+                    triggerSavedConnection(state_.welcomeSelectedIndex, screen);
+                    continue;
+                }
+            }
+        }
+
         if (state_.activeDialog == DialogType::CONNECTION) {
             bool submitted = false;
             bool cancelled = false;
@@ -494,6 +622,8 @@ void App::run() {
                 screen.render(state_);
 
                 if (dbManager_.connect(cfg, err)) {
+                    state_.isConnected = true;
+                    state_.viewMode = ViewMode::TABLE_DATA;
                     state_.activeDialog = DialogType::NONE;
                     state_.statusMessage = "Connected to " + cfg.getDisplayURI();
 
@@ -526,6 +656,20 @@ void App::run() {
                     state_.statusMessage = "Connection failed.";
                 }
             }
+        } else if (state_.activeDialog == DialogType::FILTER_PROMPT) {
+            bool submitted = false;
+            bool cancelled = false;
+            screen.filterDialog().handleInput(ch, submitted, cancelled);
+
+            if (cancelled) {
+                state_.filterQuery = "";
+                applyFilter();
+                state_.activeDialog = DialogType::NONE;
+            } else if (submitted) {
+                state_.filterQuery = screen.filterDialog().getFilterQuery();
+                applyFilter();
+                state_.activeDialog = DialogType::NONE;
+            }
         } else if (state_.activeDialog == DialogType::ERROR_POPUP) {
             bool dismissed = false;
             screen.errorDialog().handleInput(ch, dismissed);
@@ -546,6 +690,8 @@ void App::run() {
                 if (dbManager_.isConnected()) {
                     QueryResult qr = dbManager_.activeConnection()->executeQuery(sql);
                     if (qr.success) {
+                        state_.isConnected = true;
+                        state_.viewMode = ViewMode::TABLE_DATA;
                         if (!qr.columns.empty()) {
                             state_.contentHeaders = qr.columns;
                             state_.contentRows = qr.rows;
@@ -559,6 +705,10 @@ void App::run() {
                         state_.activeTableName = "SQL Result";
                         state_.activeDialog = DialogType::NONE;
                         state_.statusMessage = "SQL executed successfully.";
+
+                        if (state_.isFilterActive) {
+                            applyFilter();
+                        }
                     } else {
                         state_.errorMessage = qr.errorMessage;
                         state_.activeDialog = DialogType::ERROR_POPUP;
@@ -609,17 +759,6 @@ void App::run() {
                         state_.errorMessage = qr.errorMessage;
                         state_.activeDialog = DialogType::ERROR_POPUP;
                     }
-                } else {
-                    // Mock local state update
-                    int r = state_.contentSelectedIndex;
-                    int c = state_.contentSelectedColIndex;
-                    std::string newVal = screen.cellEditDialog().getNewValue();
-                    if (r >= 0 && r < static_cast<int>(state_.contentRows.size()) &&
-                        c >= 0 && c < static_cast<int>(state_.contentRows[r].size())) {
-                        state_.contentRows[r][c] = newVal;
-                    }
-                    state_.activeDialog = DialogType::NONE;
-                    state_.statusMessage = "Mock cell update applied.";
                 }
             }
         } else {

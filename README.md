@@ -30,13 +30,15 @@
   - **Left Navigation Sidebar**: Tree explorer showing Server → Databases → Tables / Views with expand/collapse hierarchy.
   - **Right Main Content Area**: Dynamic table data viewer & schema structure viewer with horizontal column scrolling, NULL representation, and vertical row scrolling.
   - **Bottom Status Line**: Real-time shortcut list, horizontal column position indicator (`Cols 1–4 of 12`), and status notifications.
-- **Interactive Modal Dialogs & Editing**:
+- **Interactive Modal Dialogs, Filtering & Editing**:
   - **Connection Dialog (`c` / `n`)**: Edit connection parameters (Host, Port, User, Password, Database, DB Type) or paste connection URIs (`mysql://...` or `sqlite://...`). Presets for Localhost root/admin and Online remote databases.
+  - **Table Row Filtering (`/`)**: Instant row filter modal in table view to filter data rows across all columns in real-time.
   - **SQL Query Console (`:`)**: Multiline SQL statement buffer (`Enter` for newline) executed via `F5`.
   - **Single-Cell Edit (`e`)**: Inline cell editing with primary key validation and pre-execution `UPDATE` confirmation overlay (`ConfirmDialog`).
   - **Clipboard Copying (`y` / `Y`)**: Copy cell value (`y`) or full tab-separated row (`Y`) using OSC 52 terminal escape sequences (`\033]52;c;<base64>\007`) with internal buffer fallback. `NULL` cells copy as empty strings (`""`).
   - **Error Popup Overlay**: Displays verbatim database connection/query errors inside the UI without crashing.
-- **Persistence**: Auto-saves connection configurations locally to `~/.config/lynxdb/connections.cfg`.
+- **Dynamic Accent Themes (`a` / `F2`)**: Cycle vibrant neon accent themes (Cyan, Green, Magenta, Yellow, Red, Blue) on the fly with live UI refresh.
+- **Persistence**: Auto-saves connection configurations (`~/.config/lynxdb/connections.cfg`) and active accent theme (`~/.config/lynxdb/theme.cfg`).
 
 ---
 
@@ -117,6 +119,8 @@ cmake --build build
 | Key | Action |
 | --- | --- |
 | `c` / `n` | Open Connection Dialog (Localhost root/admin, Remote MySQL, SQLite, URI) |
+| `/` | Open interactive table row filter prompt (in Table View) |
+| `a` / `F2` | Cycle neon accent color themes (Cyan, Green, Magenta, Yellow, Red, Blue) |
 | `:` | Open multiline SQL Query execution prompt |
 | `F5` / `Ctrl+R` | Execute query inside SQL Query prompt |
 | `e` / `E` | Edit selected cell (requires primary key, confirms `UPDATE` query) |

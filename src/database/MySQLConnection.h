@@ -2,7 +2,14 @@
 #define DBTERM_MYSQLCONNECTION_H
 
 #include "database/DatabaseConnection.h"
+
+#if __has_include(<mysql/mysql.h>)
 #include <mysql/mysql.h>
+#elif __has_include(<mariadb/mysql.h>)
+#include <mariadb/mysql.h>
+#else
+#include <mysql.h>
+#endif
 
 namespace dbterm {
 

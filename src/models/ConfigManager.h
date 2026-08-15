@@ -12,6 +12,58 @@ namespace dbterm {
 
 class ConfigManager {
 public:
+    static std::string encryptPassword(const std::string& rawPass) {
+        if (rawPass.empty()) return "";
+        std::string key = "lynxDB_Secret_Key_2026";
+        std::string obfuscated = rawPass;
+        for (size_t i = 0; i < rawPass.size(); ++i) {
+            obfuscated[i] = rawPass[i] ^ key[i % key.size()];
+        }
+        static const char b64table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string out;
+        int val = 0, valb = -6;
+        for (unsigned char c : obfuscated) {
+            val = (val << 8) + c;
+            valb += 8;
+            while (valb >= 0) {
+                out.push_back(b64table[(val >> valb) & 0x3F]);
+                valb -= 6;
+            }
+        }
+        if (valb > -6) out.push_back(b64table[((val << 8) >> (valb + 8)) & 0x3F]);
+        while (out.size() % 4) out.push_back('=');
+        return "enc:" + out;
+    }
+
+    static std::string decryptPassword(const std::string& encPass) {
+        if (encPass.empty()) return "";
+        if (encPass.rfind("enc:", 0) != 0) return encPass; // Fallback for plain-text legacy passwords
+
+        std::string b64 = encPass.substr(4);
+        std::vector<int> T(256, -1);
+        static const char b64table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        for (int i = 0; i < 64; i++) T[static_cast<unsigned char>(b64table[i])] = i;
+
+        std::string decoded;
+        int val = 0, valb = -8;
+        for (unsigned char c : b64) {
+            if (T[c] == -1) break;
+            val = (val << 6) + T[c];
+            valb += 6;
+            if (valb >= 0) {
+                decoded.push_back(char((val >> valb) & 0xFF));
+                valb -= 8;
+            }
+        }
+
+        std::string key = "lynxDB_Secret_Key_2026";
+        std::string raw = decoded;
+        for (size_t i = 0; i < decoded.size(); ++i) {
+            raw[i] = decoded[i] ^ key[i % key.size()];
+        }
+        return raw;
+    }
+
     static std::string getConfigDirPath() {
         const char* home = std::getenv("HOME");
         std::string base = home ? home : ".";
@@ -36,7 +88,7 @@ public:
             out << "Host=" << cfg.host << "\n";
             out << "Port=" << cfg.port << "\n";
             out << "User=" << cfg.user << "\n";
-            out << "Password=" << cfg.password << "\n";
+            out << "Password=" << encryptPassword(cfg.password) << "\n";
             out << "Database=" << cfg.database << "\n";
             out << "\n";
         }
@@ -66,7 +118,7 @@ public:
                     else if (key == "Host") cur.host = val;
                     else if (key == "Port") { try { cur.port = std::stoi(val); } catch (...) {} }
                     else if (key == "User") cur.user = val;
-                    else if (key == "Password") cur.password = val;
+                    else if (key == "Password") cur.password = decryptPassword(val);
                     else if (key == "Database") cur.database = val;
                 }
             }

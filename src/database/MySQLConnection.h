@@ -28,6 +28,7 @@ public:
     std::vector<std::string> getDatabases(std::string& errorOut) override;
     std::vector<std::string> getTables(const std::string& dbName, std::string& errorOut) override;
     QueryResult getTableStructure(const std::string& dbName, const std::string& tableName, std::string& errorOut) override;
+    std::vector<ForeignKeyInfo> getForeignKeys(const std::string& dbName, const std::string& tableName, std::string& errorOut) override;
     bool selectDatabase(const std::string& dbName, std::string& errorOut) override;
 
 private:

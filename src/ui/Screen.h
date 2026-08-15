@@ -12,6 +12,11 @@
 #include "ui/CellEditDialog.h"
 #include "ui/ConfirmDialog.h"
 #include "ui/FilterDialog.h"
+#include "ui/ExportDialog.h"
+#include "ui/RowInsertDialog.h"
+#include "ui/SchemaDdlDialog.h"
+#include "ui/GoToRowDialog.h"
+#include "ui/ErDiagramView.h"
 
 namespace dbterm {
 
@@ -28,6 +33,11 @@ public:
     CellEditDialog& cellEditDialog() { return cellEditDialog_; }
     ConfirmDialog& confirmDialog() { return confirmDialog_; }
     FilterDialog& filterDialog() { return filterDialog_; }
+    ExportDialog& exportDialog() { return exportDialog_; }
+    RowInsertDialog& rowInsertDialog() { return rowInsertDialog_; }
+    SchemaDdlDialog& schemaDdlDialog() { return schemaDdlDialog_; }
+    GoToRowDialog& goToRowDialog() { return goToRowDialog_; }
+    ErDiagramView& erDiagramView() { return erDiagramView_; }
 
 private:
     void updateDimensions(const AppState& state);
@@ -45,6 +55,11 @@ private:
     CellEditDialog cellEditDialog_;
     ConfirmDialog confirmDialog_;
     FilterDialog filterDialog_;
+    ExportDialog exportDialog_;
+    RowInsertDialog rowInsertDialog_;
+    SchemaDdlDialog schemaDdlDialog_;
+    GoToRowDialog goToRowDialog_;
+    ErDiagramView erDiagramView_;
 };
 
 } // namespace dbterm

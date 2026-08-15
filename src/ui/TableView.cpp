@@ -46,9 +46,22 @@ void TableView::render(const AppState& state) {
 
     const auto& displayRows = state.isFilterActive ? state.filteredRows : state.contentRows;
     int totalRows = static_cast<int>(displayRows.size());
-    title += "(" + std::to_string(totalRows) + " rows";
+    int maxDataRows = height_ - 4;
+    int scrollOffset = 0;
+    if (state.contentSelectedIndex >= maxDataRows) {
+        scrollOffset = state.contentSelectedIndex - maxDataRows + 1;
+    }
+    int visibleRows = std::min(maxDataRows, totalRows - scrollOffset);
+
+    int startRowDisplay = totalRows > 0 ? (scrollOffset + 1) : 0;
+    int endRowDisplay = totalRows > 0 ? (scrollOffset + visibleRows) : 0;
+
+    title += "(Rows " + std::to_string(startRowDisplay) + "-" + std::to_string(endRowDisplay) + " of " + std::to_string(totalRows);
     if (state.isFilterActive) {
         title += " | Filter: \"" + state.filterQuery + "\"";
+    }
+    if (state.sortColIndex != -1) {
+        title += std::string(" | Sorted: ") + (state.sortAscending ? "ASC" : "DESC");
     }
     title += ") ";
 
@@ -70,10 +83,16 @@ void TableView::render(const AppState& state) {
         return;
     }
 
+    int gutterWidth = 5; // e.g. " 123 │"
+
     int numCols = static_cast<int>(state.contentHeaders.size());
     std::vector<int> colWidths(numCols, 8);
     for (int c = 0; c < numCols; ++c) {
-        colWidths[c] = std::max(colWidths[c], static_cast<int>(state.contentHeaders[c].length()));
+        std::string hdr = state.contentHeaders[c];
+        if (c == state.sortColIndex) {
+            hdr += (state.sortAscending ? " ▲" : " ▼");
+        }
+        colWidths[c] = std::max(colWidths[c], static_cast<int>(hdr.length()));
         for (const auto& row : displayRows) {
             if (c < static_cast<int>(row.size())) {
                 colWidths[c] = std::max(colWidths[c], static_cast<int>(row[c].length()));
@@ -82,7 +101,9 @@ void TableView::render(const AppState& state) {
         colWidths[c] = std::min(colWidths[c], 30);
     }
 
-    int availableWidth = width_ - 4;
+    int availableWidth = width_ - 4 - gutterWidth;
+    if (availableWidth < 10) availableWidth = 10;
+
     int colStart = std::clamp(state.colOffset, 0, std::max(0, numCols - 1));
     int visibleCols = 0;
     int currentWidth = 0;
@@ -93,10 +114,13 @@ void TableView::render(const AppState& state) {
     }
     if (visibleCols == 0) visibleCols = 1;
 
-    std::string headerLine;
+    std::string headerLine = "    │";
     for (int c = 0; c < visibleCols; ++c) {
         int actualColIdx = colStart + c;
         std::string colName = state.contentHeaders[actualColIdx];
+        if (actualColIdx == state.sortColIndex) {
+            colName += (state.sortAscending ? " ▲" : " ▼");
+        }
         if (static_cast<int>(colName.length()) > colWidths[actualColIdx]) {
             colName = colName.substr(0, colWidths[actualColIdx] - 1) + "~";
         }
@@ -110,7 +134,7 @@ void TableView::render(const AppState& state) {
     mvwprintw(win_, 1, 2, "%s", headerLine.c_str());
     wattroff(win_, A_BOLD);
 
-    std::string sepLine;
+    std::string sepLine = "────┼";
     for (int c = 0; c < visibleCols; ++c) {
         int actualColIdx = colStart + c;
         for (int w = 0; w < colWidths[actualColIdx]; ++w) {
@@ -120,21 +144,21 @@ void TableView::render(const AppState& state) {
     }
     mvwprintw(win_, 2, 2, "%s", sepLine.c_str());
 
-    int maxDataRows = height_ - 4;
-    int scrollOffset = 0;
-    if (state.contentSelectedIndex >= maxDataRows) {
-        scrollOffset = state.contentSelectedIndex - maxDataRows + 1;
-    }
-
-    int visibleRows = std::min(maxDataRows, totalRows - scrollOffset);
-
     for (int r = 0; r < visibleRows; ++r) {
         int actualRowIdx = scrollOffset + r;
         bool isRowSelected = (actualRowIdx == state.contentSelectedIndex);
 
         const auto& rowData = displayRows[actualRowIdx];
 
-        int printX = 2;
+        if (has_colors()) {
+            wattron(win_, COLOR_PAIR(4));
+        }
+        mvwprintw(win_, r + 3, 2, "%4d│", actualRowIdx + 1);
+        if (has_colors()) {
+            wattroff(win_, COLOR_PAIR(4));
+        }
+
+        int printX = 2 + gutterWidth;
         for (int c = 0; c < visibleCols; ++c) {
             int actualColIdx = colStart + c;
             bool isCellSelected = isRowSelected && (actualColIdx == state.contentSelectedColIndex);

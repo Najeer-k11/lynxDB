@@ -127,4 +127,38 @@ QueryResult SQLiteConnection::getTableStructure(const std::string& /*dbName*/, c
     return executeQuery(sql);
 }
 
+std::vector<ForeignKeyInfo> SQLiteConnection::getForeignKeys(const std::string& /*dbName*/, const std::string& tableName, std::string& errorOut) {
+    std::vector<ForeignKeyInfo> result;
+    if (!connected_) return result;
+
+    if (!tableName.empty()) {
+        std::string sql = "PRAGMA foreign_key_list(\"" + tableName + "\");";
+        QueryResult qr = executeQuery(sql);
+        if (qr.success) {
+            for (const auto& row : qr.rows) {
+                if (row.size() >= 5) {
+                    result.push_back({tableName, row[3], row[2], row[4]});
+                }
+            }
+        } else {
+            errorOut = qr.errorMessage;
+        }
+    } else {
+        std::string dummyErr;
+        auto tbls = getTables("", dummyErr);
+        for (const auto& tbl : tbls) {
+            std::string sql = "PRAGMA foreign_key_list(\"" + tbl + "\");";
+            QueryResult qr = executeQuery(sql);
+            if (qr.success) {
+                for (const auto& row : qr.rows) {
+                    if (row.size() >= 5) {
+                        result.push_back({tbl, row[3], row[2], row[4]});
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
 } // namespace dbterm

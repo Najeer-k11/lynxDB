@@ -5,6 +5,7 @@
 #include "models/ConnectionConfig.h"
 #include "models/DatabaseNode.h"
 #include "models/ThemeManager.h"
+#include "ui/SchemaDdlDialog.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -25,14 +26,19 @@ enum class DialogType {
     SQL_PROMPT,
     CELL_EDIT,
     CONFIRM_UPDATE,
-    FILTER_PROMPT
+    FILTER_PROMPT,
+    EXPORT_PROMPT,
+    ROW_INSERT,
+    SCHEMA_DDL,
+    GO_TO_ROW
 };
 
 enum class ViewMode {
     WELCOME,
     TABLE_DATA,
     TABLE_STRUCTURE,
-    SQL_QUERY
+    SQL_QUERY,
+    ER_DIAGRAM
 };
 
 struct VisibleNode {
@@ -65,6 +71,10 @@ struct AppState {
     int contentSelectedIndex{0};
     int contentSelectedColIndex{0};
     int colOffset{0};
+
+    // Column sorting state
+    int sortColIndex{-1};
+    bool sortAscending{true};
 
     std::vector<std::string> contentHeaders;
     std::vector<std::vector<std::string>> contentRows;
@@ -103,6 +113,14 @@ private:
     void loadTableStructure(const std::string& dbName, const std::string& tableName);
     void copyToClipboard(const std::string& text);
     void triggerCellEdit(Screen& screen);
+    void triggerRowDelete(Screen& screen);
+    void triggerRowInsert(Screen& screen);
+    void triggerExport(Screen& screen);
+    void triggerSchemaDdl(DdlAction action, Screen& screen, const std::string& targetTable = "", const std::string& targetCol = "");
+    void triggerForeignKeyJump();
+    void triggerGoToRow(Screen& screen);
+    void triggerErDiagram(Screen& screen);
+    void toggleColumnSort();
     void triggerSavedConnection(int index, Screen& screen);
     void applyFilter();
     void cycleNeonTheme();

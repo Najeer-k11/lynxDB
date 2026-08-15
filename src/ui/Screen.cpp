@@ -29,6 +29,7 @@ void Screen::updateDimensions(const AppState& state) {
         sidebar_.init(mainHeight, sidebarWidth, 0, 0);
         tableView_.init(mainHeight, contentWidth, 0, sidebarWidth);
         welcomeView_.init(mainHeight, contentWidth, 0, sidebarWidth);
+        erDiagramView_.init(mainHeight, contentWidth, 0, sidebarWidth);
         statusBar_.init(statusHeight, termWidth_, mainHeight, 0);
 
         connectionDialog_.init(termHeight_, termWidth_);
@@ -37,6 +38,10 @@ void Screen::updateDimensions(const AppState& state) {
         cellEditDialog_.init(termHeight_, termWidth_, state.editTargetColumn, "");
         confirmDialog_.init(termHeight_, termWidth_, state.pendingUpdateSql);
         filterDialog_.init(termHeight_, termWidth_);
+        exportDialog_.init(termHeight_, termWidth_, state.activeTableName);
+        rowInsertDialog_.init(termHeight_, termWidth_, state.contentHeaders);
+        schemaDdlDialog_.init(termHeight_, termWidth_, DdlAction::CREATE_TABLE);
+        goToRowDialog_.init(termHeight_, termWidth_, 100);
 
         clear();
         refresh();
@@ -50,6 +55,8 @@ void Screen::render(const AppState& state) {
 
     if (!state.isConnected && state.viewMode == ViewMode::WELCOME) {
         welcomeView_.render(state);
+    } else if (state.viewMode == ViewMode::ER_DIAGRAM) {
+        erDiagramView_.render();
     } else {
         tableView_.render(state);
     }
@@ -72,6 +79,14 @@ void Screen::render(const AppState& state) {
     } else if (state.activeDialog == DialogType::FILTER_PROMPT) {
         filterDialog_.init(termHeight_, termWidth_);
         filterDialog_.render();
+    } else if (state.activeDialog == DialogType::EXPORT_PROMPT) {
+        exportDialog_.render();
+    } else if (state.activeDialog == DialogType::ROW_INSERT) {
+        rowInsertDialog_.render();
+    } else if (state.activeDialog == DialogType::SCHEMA_DDL) {
+        schemaDdlDialog_.render();
+    } else if (state.activeDialog == DialogType::GO_TO_ROW) {
+        goToRowDialog_.render();
     }
 }
 

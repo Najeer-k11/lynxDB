@@ -37,7 +37,7 @@ void StatusBar::render(const AppState& state) {
     const auto& themes = ThemeManager::getThemes();
     std::string themeName = themes[state.currentThemeIndex % themes.size()].name;
 
-    std::string shortcuts = " Tab: Switch | ↑↓/←→: Nav | /: Filter | e: Edit | y/Y: Copy | a: " + themeName + " | q: Quit ";
+    std::string shortcuts = " Tab: Switch | ↑↓/←→: Nav | /: Filter | f: FK Jump | g: GoTo | V: ER View | e: Edit | d: Del | i: Ins | E: Exp | o: Sort | a: " + themeName + " | q: Quit ";
     if (!state.contentHeaders.empty()) {
         int totalCols = static_cast<int>(state.contentHeaders.size());
         shortcuts += "| Cols " + std::to_string(state.contentSelectedColIndex + 1) + " of " + std::to_string(totalCols) + " ";

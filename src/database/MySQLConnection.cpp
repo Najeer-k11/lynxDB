@@ -190,4 +190,30 @@ QueryResult MySQLConnection::getTableStructure(const std::string& dbName, const 
     return executeQuery(sql);
 }
 
+std::vector<ForeignKeyInfo> MySQLConnection::getForeignKeys(const std::string& dbName, const std::string& tableName, std::string& errorOut) {
+    std::vector<ForeignKeyInfo> result;
+    if (!connected_) return result;
+
+    std::string db = dbName.empty() ? config_.database : dbName;
+    std::string sql = "SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME "
+                      "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                      "WHERE TABLE_SCHEMA = '" + db + "' ";
+    if (!tableName.empty()) {
+        sql += "AND TABLE_NAME = '" + tableName + "' ";
+    }
+    sql += "AND REFERENCED_TABLE_NAME IS NOT NULL;";
+
+    QueryResult qr = executeQuery(sql);
+    if (qr.success) {
+        for (const auto& row : qr.rows) {
+            if (row.size() >= 4) {
+                result.push_back({row[0], row[1], row[2], row[3]});
+            }
+        }
+    } else {
+        errorOut = qr.errorMessage;
+    }
+    return result;
+}
+
 } // namespace dbterm

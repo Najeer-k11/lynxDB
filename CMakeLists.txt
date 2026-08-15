@@ -27,6 +27,11 @@ add_executable(lynxdb
     src/ui/CellEditDialog.cpp
     src/ui/ConfirmDialog.cpp
     src/ui/FilterDialog.cpp
+    src/ui/ExportDialog.cpp
+    src/ui/RowInsertDialog.cpp
+    src/ui/SchemaDdlDialog.cpp
+    src/ui/GoToRowDialog.cpp
+    src/ui/ErDiagramView.cpp
 )
 
 target_include_directories(lynxdb PRIVATE

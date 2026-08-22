@@ -1,7 +1,7 @@
 #ifndef DBTERM_THEMEMANAGER_H
 #define DBTERM_THEMEMANAGER_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 #include <fstream>

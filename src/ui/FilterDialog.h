@@ -1,7 +1,7 @@
 #ifndef DBTERM_FILTERDIALOG_H
 #define DBTERM_FILTERDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

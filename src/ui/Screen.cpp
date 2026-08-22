@@ -1,5 +1,5 @@
 #include "ui/Screen.h"
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 
 namespace dbterm {
 

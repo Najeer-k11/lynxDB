@@ -1,7 +1,7 @@
 #ifndef DBTERM_SCHEMADDLDIALOG_H
 #define DBTERM_SCHEMADDLDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 

@@ -1,7 +1,7 @@
 #ifndef DBTERM_EXPORTDIALOG_H
 #define DBTERM_EXPORTDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 

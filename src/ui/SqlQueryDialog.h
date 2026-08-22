@@ -1,7 +1,7 @@
 #ifndef DBTERM_SQLQUERYDIALOG_H
 #define DBTERM_SQLQUERYDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

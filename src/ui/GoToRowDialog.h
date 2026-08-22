@@ -1,7 +1,7 @@
 #ifndef DBTERM_GOTOROWDIALOG_H
 #define DBTERM_GOTOROWDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

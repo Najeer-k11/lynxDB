@@ -2,7 +2,7 @@
 #define DBTERM_CONNECTIONDIALOG_H
 
 #include "models/ConnectionConfig.h"
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 

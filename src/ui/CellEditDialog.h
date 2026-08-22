@@ -1,7 +1,7 @@
 #ifndef DBTERM_CELLEDITDIALOG_H
 #define DBTERM_CELLEDITDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

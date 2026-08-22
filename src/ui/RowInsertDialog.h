@@ -1,7 +1,7 @@
 #ifndef DBTERM_ROWINSERTDIALOG_H
 #define DBTERM_ROWINSERTDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 

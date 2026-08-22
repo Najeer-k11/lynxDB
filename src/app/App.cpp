@@ -3,7 +3,7 @@
 #include "models/ConfigManager.h"
 #include "models/ThemeManager.h"
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <clocale>
 #include <algorithm>
 #include <iostream>

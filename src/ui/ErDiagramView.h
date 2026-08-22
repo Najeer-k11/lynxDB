@@ -2,7 +2,7 @@
 #define DBTERM_ERDIAGRAMVIEW_H
 
 #include "database/DatabaseConnection.h"
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 #include <vector>
 

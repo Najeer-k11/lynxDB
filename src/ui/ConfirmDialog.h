@@ -1,7 +1,7 @@
 #ifndef DBTERM_CONFIRMDIALOG_H
 #define DBTERM_CONFIRMDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

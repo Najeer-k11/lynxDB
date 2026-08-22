@@ -2,7 +2,7 @@
 #define DBTERM_WELCOMEVIEW_H
 
 #include "app/App.h"
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 
 namespace dbterm {
 

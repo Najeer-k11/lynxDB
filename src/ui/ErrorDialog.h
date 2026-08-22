@@ -1,7 +1,7 @@
 #ifndef DBTERM_ERRORDIALOG_H
 #define DBTERM_ERRORDIALOG_H
 
-#include <ncursesw/ncurses.h>
+#include "ui/CursesCompat.h"
 #include <string>
 
 namespace dbterm {

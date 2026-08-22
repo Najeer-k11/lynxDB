@@ -75,10 +75,27 @@ packaging/
 └── PKGBUILD             (Arch Linux, Manjaro, EndeavourOS)
 ```
 
-### Quick Install Commands
-- **Fedora / Nobara / RHEL**: `sudo dnf install ./lynxdb-0.1.0-Linux.rpm`
-- **Debian / Ubuntu**: `sudo dpkg -i lynxdb-0.1.0-Linux.deb`
-- **Arch Linux / AUR**: `cd packaging && makepkg -si`
+### Prerequisites & Dependencies
+
+| Distribution | Required Packages |
+| :--- | :--- |
+| **Arch Linux / Manjaro** | `sudo pacman -S --needed base-devel cmake gcc pkgconf ncurses mariadb-libs sqlite` |
+| **Debian / Ubuntu** | `sudo apt install -y build-essential cmake pkg-config libncursesw5-dev libmariadb-dev libsqlite3-dev` |
+| **Fedora / RHEL** | `sudo dnf install -y gcc-c++ cmake pkgconf-pkg-config ncurses-devel mariadb-connector-c-devel sqlite-devel` |
+
+### Installation
+
+#### Option 1: Build & Install from Source (All Distros)
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
+```
+
+#### Option 2: Distribution Packages
+- **Arch Linux (PKGBUILD)**: `cd packaging && makepkg -si`
+- **Fedora / Nobara / RHEL (RPM)**: `sudo dnf install ./lynxdb-0.1.0-Linux.rpm`
+- **Debian / Ubuntu (DEB)**: `sudo dpkg -i lynxdb-0.1.0-Linux.deb`
 
 ---
 
